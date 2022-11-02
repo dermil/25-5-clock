@@ -11,3 +11,35 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+#root {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+#mainApp {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  margin: auto;
+  border: 1px double black;
+}
+
+.timerControls {
+  width: 40%;
+  margin: 2px;
+}
+
+#buttons {
+  border: 1px double black;
+  width: 100%;
+  justify-content: space-between;
+}
+
+#breakSeshGroup {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+}
