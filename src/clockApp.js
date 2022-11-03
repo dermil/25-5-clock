@@ -15,7 +15,8 @@ class TimerApp extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            expectedStates: ['start', 'paused', 'running'],
+            expectedStates: ['start', 'paused', 'running','session','break'],
+            phaseState: 'Session',
             timerState: 'paused',
             sessionMinutes: 25,
             breakMinutes: 5,
@@ -32,7 +33,10 @@ class TimerApp extends React.Component {
         this.initializeClock = this.initializeClock.bind(this);
         this.pauseTime = this.pauseTime.bind(this);
         this.updateDisplay = this.updateDisplay.bind(this);
-    }
+        this.phaseControl = this.phaseControl.bind(this);
+        this.switchTimer = this.switchTimer.bind(this);
+        this.playAlarm = this.playAlarm.bind(this);
+    };
 /* I need to create a set of 3 functions: 
     1. A function to decrement the time
     2. A function that activates depending on the state of the timer
@@ -46,22 +50,22 @@ class TimerApp extends React.Component {
         } else {
             this.pauseTime()
         }
-    }
+    };
 
     pauseTime(){
         this.setState({timerState: 'paused'});
         clearInterval(this.state.intervalID);
-    }
+    };
 
     beginCountdown() {
         this.setState({
             intervalID: setInterval(this.updateCountdown, 1000)
         })
-    }
+    };
 
     updateCountdown() {
         this.decrementTimer();   
-    }
+    };
 
     updateDisplay() {
         let minutes = Math.floor(this.state.timer / 60);
@@ -71,67 +75,136 @@ class TimerApp extends React.Component {
         minutes = minutes < 10 ? '0' + minutes : minutes;
         
         return minutes + ':' + seconds;
-    }
+    };
 
     decrementTimer(){
         this.setState({
             timer: this.state.timer - 1
         });
         if (this.state.timer <= 0) {
-            this.setState({timer: 0})
+            this.setState({timer: 0});
+            this.phaseControl();
+            this.playAlarm();
         }
+    };
+
+    phaseControl(){
+        this.pauseTime();
+        if (this.state.phaseState === 'Session'){
+            this.beginCountdown()
+            this.setState({
+                timerState: 'running'
+            })
+            this.switchTimer(this.state.breakMinutes * 60, 'Break');
+        } else {
+            this.beginCountdown()
+            this.setState({
+                timerState: 'running'
+            })
+            this.switchTimer(this.state.sessionMinutes * 60, 'Session');
+        };
+    };
+
+    playAlarm(){
+        this.audioBeep.play();
     }
+
+    switchTimer(num,str){
+        this.setState({
+            phaseState: str,
+            timer: num
+        });
+    };
 
     addMinute(minuteType){
         if(minuteType === 'session'){
             this.setState(state => ({
-                sessionMinutes: state.sessionMinutes += 1,
-                timer: state.sessionMinutes * 60
-                
+                sessionMinutes: state.sessionMinutes += 1
             }));
-            
-            if (this.state.sessionMinutes >= 60) {
-                this.setState({sessionMinutes: 60, timer: this.state.sessionMinutes * 60})
+
+            if (this.state.phaseState === 'Session') {
+                this.setState(state => ({
+                    timer: state.sessionMinutes * 60
+                }));
             };
-        } else {
+
+            if (this.state.sessionMinutes >= 60) {
+                this.setState({sessionMinutes: 60});
+                if (this.state.phaseState === 'Session') {
+                    this.setState(state => ({
+                        timer: state.sessionMinutes * 60
+                    }));
+                };
+            };
+        } else { //BREAK
             this.setState(state => ({
-                breakMinutes: state.breakMinutes += 1,
-                timer: state.breakMinutes * 60
+                breakMinutes: state.breakMinutes += 1
             }));
+
+            if (this.state.phaseState === 'Break') {
+                this.setState(state => ({
+                    timer: state.breakMinutes * 60
+                }));
+            };
+
             if (this.state.breakMinutes >= 60) {
-                this.setState({breakMinutes: 60, timer: this.state.breakMinutes * 60})
+                this.setState({breakMinutes: 60});
+                if (this.state.phaseState === 'Break') {
+                    this.setState(state => ({
+                        timer: state.breakMinutes * 60
+                    }));
+                };
             }; 
         }
-    }
+    };
 
     subtractMinute(minuteType){
         if(minuteType === 'session'){
             this.setState(state => ({
                 sessionMinutes: state.sessionMinutes -= 1,
-                timer: state.sessionMinutes * 60
             }));
             
-            if (this.state.sessionMinutes <= 1) {
-                this.setState({sessionMinutes: 1, timer: 1})
+            if (this.state.phaseState === 'Session') {
+                this.setState(state => ({
+                    timer: state.sessionMinutes * 60
+                }));
             };
-            
-            
-        } else {
+
+            if (this.state.sessionMinutes <= 1) {
+                this.setState({sessionMinutes: 1});
+                if (this.state.phaseState === 'Session') {
+                    this.setState(state => ({
+                        timer: state.sessionMinutes * 60
+                    }));
+                };
+            };
+
+        } else {//BREAK
             this.setState(state => ({
-                breakMinutes: state.breakMinutes -= 1,
-                timer: state.breakMinutes * 60
+                breakMinutes: state.breakMinutes -= 1
             }));
-            
+            if (this.state.phaseState === 'Break') {
+                this.setState(state => ({
+                    timer: state.breakMinutes * 60
+                }));
+            };
+
             if (this.state.breakMinutes <= 1) {
-                this.setState({breakMinutes: 1, timer: 1})
+                this.setState({breakMinutes: 1});
+                if (this.state.phaseState === 'Break') {
+                    this.setState(state => ({
+                        timer: state.breakMinutes * 60
+                    }));
+                };
             };
             
         }
-    }
+    };
 
     initializeClock(){
         this.setState({
-            expectedStates: ['start', 'paused', 'running'],
+            expectedStates: ['start', 'paused', 'running','session','break'],
+            phaseState: 'Session',
             timerState: 'paused',
             sessionMinutes: 25,
             breakMinutes: 5,
@@ -139,7 +212,9 @@ class TimerApp extends React.Component {
             intervalID: '', //need this for the countdown to be stopped
         });
         this.pauseTime()
-    }
+        this.audioBeep.pause();
+        this.audioBeep.currentTime = 0;
+    };
 
     render () {
         var staStop;
@@ -150,12 +225,13 @@ class TimerApp extends React.Component {
             <div
                 id="mainApp"
             >  
+                <button onClick={this.phaseControl}>Dev Button</button>
                 <div>
                     Dev Info: <br />
                     state: {this.state.timerState} <br />
                     timer: {this.state.timer} <br />
                 </div>
-                <div id='timer-label'>{this.state.timerState}</div>
+                <div id='timer-label'>{this.state.phaseState}</div>
                 <div id='breakSeshGroup'>
                     
                     <div>
@@ -187,7 +263,7 @@ class TimerApp extends React.Component {
                     </div>
                 </div>
 
-                <div id='time-left'>{this.updateDisplay()}</div>
+                <div id='time-left'><p className="h1">{this.updateDisplay()}</p></div>
                 <div id='buttons'>
                     <button 
                     id = 'start_stop'
@@ -207,21 +283,12 @@ class TimerApp extends React.Component {
                         </span>
                     </button>
                 </div>
-                
+                <audio 
+                    id='beep'
+                    preload="auto"
+                    ref={(audio) => {this.audioBeep = audio;}} 
+                    src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav" />
             </div>
-        )
-    }
-}
-
-//COMPONENT TO DISPLAY THE TIMER
-class TimerDisplay extends React.Component {
-    constructor(props){
-        super(props)
-    }
-    
-    render() {
-        return(
-            <div id='time-left'>{this.props.minutes}:{this.props.seconds}</div>
         )
     }
 }
@@ -245,7 +312,7 @@ class BreakSession extends React.Component {
     render(){
         return (
             <div className='breakSeshController'>
-                <button id={this.props.buttonIncrementID} onClick={this.increment}>
+                <button id={this.props.buttonIncrementID} onClick={this.increment} className='btn btn-info incrementButtons'>
                     <span class="material-symbols-outlined">
                         arrow_upward
                     </span>
@@ -256,7 +323,7 @@ class BreakSession extends React.Component {
                 <div id={this.props.labelLength}>
                     {this.props.minutes}
                 </div>
-                <button id={this.props.buttonDecrementID} onClick={this.decrement}>
+                <button id={this.props.buttonDecrementID} onClick={this.decrement} className='btn btn-info incrementButtons'>
                 <span class="material-symbols-outlined">
                         arrow_downward
                     </span>
